@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Maven DL</title>
+</head>
+
+
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+
+<script type="text/javascript">
+
+    google.charts.load('current', {'packages': ['treemap']});
+    google.charts.setOnLoadCallback(drawChart);
+
+    function drawChart() {
+
+        tree = new google.visualization.TreeMap(document.getElementById('chart_div'));
+
+        var ws = new WebSocket('ws://localhost:9292/websocket');
+        ws.onopen = function () {
+            console.log('Websocket connection open and ready for TREE data ...');
+        };
+
+        ws.onmessage = function (evt) {
+            console.log('Tree Data = ' + evt);
+            var received_array = JSON.parse(evt.data);
+            var treeMap = new google.visualization.DataTable();
+
+            treeMap.addColumn('string', 'Org');
+            treeMap.addColumn('string', 'Parent');
+            treeMap.addColumn('number', 'Download Count');
+
+            var dataForTreeMap = [];
+            dataForTreeMap.push(['Host / Organization', null, 0]);
+            for (var i in received_array) {
+                dataForTreeMap.push([received_array[i].organization, 'Host / Organization', received_array[i].downloads]);
+            }
+
+            treeMap.addRows(dataForTreeMap);
+
+            // load and draw the heat map
+            tree.draw(treeMap, {
+                minColor: '#930121',
+                midColor: '#ec891d',
+                maxColor: '#014a01',
+                headerHeight: 25,
+                fontColor: 'white',
+                fontSize: '22',
+                showScale: true,
+                generateTooltip: showTooltip,
+                useWeightedAverageForAggregation: true
+            });
+        }
+    }
+
+    function showTooltip(row, size, value) {
+        return '<div style="background:#fd9; padding:10px; border-style:solid">' +
+            'Total Downloads: ' + size +
+            '<br>' +
+            '</div>';
+    }
+
+    // Table
+    google.charts.load('current', {'packages': ['table']});
+    google.charts.setOnLoadCallback(drawContent);
+
+    function drawContent() {
+
+        var ws = new WebSocket('ws://localhost:9293/websocket');
+        ws.onopen = function () {
+            console.log('Websocket connection open and ready for TABLE data ...');
+        };
+
+        ws.onmessage = function (evt) {
+            console.log('Table Data = ' + evt);
+            var received_array = JSON.parse(evt.data);
+
+            // initialize data table
+            var data = new google.visualization.DataTable();
+            data.addColumn('string', 'ipAddress');
+            data.addColumn('string', 'hostname');
+            data.addColumn('string', 'organization');
+            data.addColumn('string', 'country');
+            data.addColumn('string', 'zipcode');
+            data.addColumn('string', 'username');
+            data.addColumn('string', 'date');
+            data.addColumn('string', 'pathInformation');
+            data.addColumn('string', 'userAgent');
+            data.addColumn('string', 'releaseNumber');
+
+            var dataForTable = [];
+
+            for (var i in received_array) {
+                data.addRow([received_array[i].ipAddress, received_array[i].hostname, received_array[i].organization, received_array[i].country, received_array[i].zipcode, received_array[i].username, received_array[i].date, received_array[i].pathInformation, received_array[i].userAgent, received_array[i].releaseNumber]);
+            }
+
+            //data.sort({column: 1, desc: true});
+            var table = new google.visualization.Table(document.getElementById('table_div'));
+            table.draw(data, {showRowNumber: true, width: '100%', height: '100%'});
+        }
+    }
+
+</script>
+
+<body>
+
+<br>
+<br>
+<div id="table_div" style="width: 75%; height: 500px; margin:0 auto;"></div>
+<br>
+<div id="chart_div" style="width: 75%; height: 500px; margin:0 auto;"></div>
+</body>
+</html>
